@@ -1,5 +1,8 @@
 """La API: recibe los datos de un cliente y devuelve la probabilidad de baja.
 
+Es la puerta para otros programas (Excel, Power BI, otra app, un asistente de IA…).
+Las personas usan la interfaz (interfaz.py).
+
 Arrancar en local:  uvicorn app:app --reload
 Probarla:           http://localhost:8000/docs
 """

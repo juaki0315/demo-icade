@@ -1,24 +1,25 @@
 ---
-title: App Churn
+title: ¿Se irá este cliente?
 emoji: 📉
 colorFrom: indigo
 colorTo: blue
-sdk: docker
-app_port: 8501
+sdk: gradio
+sdk_version: 6.32.0
+app_file: interfaz.py
+pinned: false
 ---
 
 # ¿Se irá este cliente?
 
 App de ejemplo de la charla **Del notebook a producción: dar vida a un modelo de IA**.
-Un modelo de churn, una API con FastAPI y una interfaz con Streamlit.
+Un modelo de churn, una interfaz con Gradio para las personas y una API con FastAPI para otros programas.
 
 | Archivo | Pieza |
 |---|---|
 | `train.py` | El modelo: entrena y guarda `model.joblib` |
-| `app.py` | La API (backend) con FastAPI |
-| `interfaz.py` | La interfaz (frontend) con Streamlit |
+| `interfaz.py` | La interfaz (Gradio): la web para las personas. Es lo que se publica |
+| `app.py` | La API (FastAPI): la puerta para otros programas |
 | `requirements.txt` | Las librerías que necesita |
-| `Dockerfile` | La receta para empaquetarla y publicarla |
 | `.github/workflows/deploy.yml` | Publica en Hugging Face en cada cambio de `main` |
 
 ## Ejecutarla en vuestro ordenador
@@ -30,13 +31,21 @@ pip install -r requirements.txt
 python train.py
 ```
 
-Después, en dos terminales:
+La interfaz:
 
 ```bash
-uvicorn app:app --reload          # la API: http://localhost:8000/docs
-streamlit run interfaz.py         # la app: http://localhost:8501
+python interfaz.py                # http://localhost:7860
 ```
 
-El bloque de arriba (entre `---`) es la configuración que lee Hugging Face Spaces.
+La API, en otra terminal:
+
+```bash
+uvicorn app:app --reload          # http://localhost:8000/docs
+```
+
+## Publicarla
+
+El bloque de arriba (entre `---`) es la configuración que lee Hugging Face Spaces: un Space de Gradio que ejecuta `interfaz.py`.
+Con una cuenta gratuita, el Space debe usar el hardware **ZeroGPU**.
 
 La carpeta `charla/` tiene la presentación y el guion de la demo. No se publica en el Space: el workflow solo copia la app.

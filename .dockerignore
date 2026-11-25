@@ -1,7 +1,0 @@
-charla/
-.git/
-.github/
-__pycache__/
-.venv/
-venv/
-model.joblib

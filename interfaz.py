@@ -1,19 +1,44 @@
-"""La interfaz: una página web que pide los datos y llama a la API.
+"""La interfaz: una página web hecha con Gradio que usa el modelo.
 
-Arrancar en local:  streamlit run interfaz.py
+Arrancar en local:  python interfaz.py   ->  http://localhost:7860
+Es el archivo que ejecuta Hugging Face Spaces (ver app_file en README.md).
 """
-import requests
-import streamlit as st
+import os
 
-URL_API = "http://localhost:8000/predict"
+import gradio as gr
+import joblib
 
-st.title("¿Se irá este cliente?")
-antiguedad = st.number_input("Meses como cliente", 0, 120, 14)
-gasto = st.number_input("Gasto mensual (€)", 0.0, 500.0, 59.9)
-llamadas = st.number_input("Llamadas a soporte", 0, 20, 4)
+from train import entrenar
 
-if st.button("Predecir"):
-    datos = {"antiguedad": antiguedad, "gasto": gasto, "llamadas": llamadas}
-    r = requests.post(URL_API, json=datos)
-    prob = r.json()["prob_churn"]
-    st.metric("Probabilidad de baja", f"{prob:.0%}")
+try:
+    import spaces              # solo existe en Hugging Face (ZeroGPU)
+    zerogpu = spaces.GPU
+except ImportError:
+    zerogpu = lambda f: f      # en vuestro ordenador no hace nada
+
+if not os.path.exists("model.joblib"):
+    entrenar()
+model = joblib.load("model.joblib")
+
+
+@zerogpu
+def predecir(antiguedad, gasto, llamadas):
+    X = [[antiguedad, gasto, llamadas]]
+    prob = model.predict_proba(X)[0][1]
+    return f"{prob:.0%}"
+
+
+demo = gr.Interface(
+    fn=predecir,
+    inputs=[
+        gr.Number(label="Meses como cliente", value=14),
+        gr.Number(label="Gasto mensual (€)", value=59.9),
+        gr.Number(label="Llamadas a soporte", value=4),
+    ],
+    outputs=gr.Textbox(label="Probabilidad de baja"),
+    title="¿Se irá este cliente?",
+    submit_btn="Predecir",
+    flagging_mode="never",
+)
+
+demo.launch()

@@ -7,12 +7,18 @@ En la demo se clona este repositorio, se ejecuta la app en local, se hace un cam
 
 > En este guion, `TU-USUARIO-HF` es tu usuario de Hugging Face. Cámbialo también en `.github/workflows/deploy.yml`.
 
-## Por qué Hugging Face y no GitHub Pages
+## Dónde se publica y por qué
 
-GitHub Pages solo sirve webs estáticas (HTML, CSS y JavaScript) y no ejecuta Python. Esta app necesita ejecutar el modelo, la API y Streamlit. Hugging Face Spaces sí lo hace, es gratis y se actualiza sola con cada cambio en `main`:
+| Opción | Por qué sí o por qué no |
+|---|---|
+| GitHub Pages | Solo sirve webs estáticas y no ejecuta Python. No nos sirve. |
+| Hugging Face, Space de Docker | Pide el plan PRO. |
+| **Hugging Face, Space de Gradio con hardware ZeroGPU** | **Gratis para cuentas personales (hasta 2 Spaces). Es el que usamos.** |
+
+Por eso la interfaz está hecha con **Gradio** (`interfaz.py`). La API con FastAPI (`app.py`) se enseña en local, como la puerta para otros programas.
 
 ```
-GitHub (código)  --merge en main-->  GitHub Actions  -->  Hugging Face Space  -->  URL pública
+GitHub (código)  --merge en main-->  GitHub Actions  -->  Space de Gradio  -->  URL pública
 ```
 
 La carpeta `charla/` (la presentación y este guion) no se sube al Space: el workflow solo copia la app.
@@ -33,13 +39,11 @@ git config --global user.email "tu-email@ejemplo.com"
 ```
 
 ### 1.2 Subir la primera versión a GitHub
-Los archivos ya están en la carpeta `demo-icade` que clonaste.
-
 Con GitHub Desktop:
 1. Escribe el mensaje "Primera versión de la app".
 2. Pulsa **Commit to main** y después **Push origin**.
 
-O con la terminal, dentro de la carpeta:
+O con la terminal, dentro de la carpeta `demo-icade`:
 ```powershell
 git add .
 git commit -m "Primera versión de la app"
@@ -49,10 +53,12 @@ git push
 ### 1.3 Crear el Space en Hugging Face
 1. En https://huggingface.co/new-space, rellena:
    - Space name: `demo-icade`
-   - SDK: **Docker**, plantilla **Blank**
-   - Hardware: CPU basic (gratis)
+   - SDK: **Gradio**, plantilla Blank
+   - Hardware: **ZeroGPU**, la opción gratuita para cuentas personales
    - Visibilidad: Public
 2. En https://huggingface.co/settings/tokens, crea un token de tipo **Write** y cópialo.
+
+El bloque de configuración del `README.md` ya indica a Hugging Face que es una app de Gradio que se arranca con `interfaz.py`.
 
 ### 1.4 Conectar GitHub con Hugging Face
 1. En https://github.com/juaki0315/demo-icade, ve a Settings → Secrets and variables → Actions → **New repository secret**.
@@ -63,7 +69,7 @@ git push
 4. Haz commit y push del cambio.
 5. Comprueba el despliegue:
    - En la pestaña **Actions** de GitHub debe aparecer "Desplegar en Hugging Face" en verde.
-   - En el Space, el estado pasa de *Building* a *Running* en 2–4 minutos.
+   - En el Space, el estado pasa de *Building* a *Running* en 1–3 minutos.
    - La app queda en `https://TU-USUARIO-HF-demo-icade.hf.space`.
 
 Mientras no exista el secreto `HF_TOKEN`, el workflow termina en verde sin desplegar nada.
@@ -114,9 +120,7 @@ python train.py
 ```
 Sale `accuracy = 0.86` y `Modelo guardado en model.joblib`.
 
-> «Esto es vuestro notebook: entrena y guarda el modelo en un archivo.»
-
-### Demo 3 · Arrancar la API y probarla (3 min)
+### Demo 3 · La API y su página de prueba (3 min)
 En la **terminal 1**:
 ```powershell
 uvicorn app:app --reload
@@ -129,13 +133,16 @@ uvicorn app:app --reload
 ```
 4. La respuesta es `{"prob_churn": 0.681}`.
 
-### Demo 4 · Arrancar la interfaz (2 min)
+> «Esta es la puerta para otros programas: Excel, Power BI, otra app…»
+
+### Demo 4 · La interfaz con Gradio (2 min)
 En la **terminal 2**, con el entorno activado:
 ```powershell
-streamlit run interfaz.py
+python interfaz.py
 ```
-1. Abre http://localhost:8501.
+1. Abre http://localhost:7860.
 2. Pulsa **Predecir**. Sale **68%**.
+3. Enseña el enlace **Use via API** al pie: Gradio también crea una API sola.
 
 > «Está en localhost: solo funciona en mi portátil.»
 
@@ -143,16 +150,16 @@ streamlit run interfaz.py
 ```powershell
 git switch -c riesgo-alto
 ```
-Añade al final de `interfaz.py`, dentro del `if st.button(...)`:
+En `interfaz.py`, dentro de `predecir`, añade las dos líneas marcadas con `+` justo antes del `return` final:
 ```python
-    if prob > 0.5:
-        st.error("Riesgo alto: llamad a este cliente esta semana")
-    else:
-        st.success("Riesgo bajo")
+    prob = model.predict_proba(X)[0][1]
++   if prob > 0.5:
++       return f"{prob:.0%} · Riesgo alto: llamad esta semana"
+    return f"{prob:.0%}"
 ```
 1. Guarda el archivo.
-2. En el navegador, pulsa **Rerun** o la tecla **R**.
-3. Pulsa **Predecir**. Aparece el aviso rojo.
+2. En la terminal 2, para la app con **Ctrl+C** y vuelve a lanzarla con `python interfaz.py`.
+3. Recarga el navegador y pulsa **Predecir**. Sale «68% · Riesgo alto: llamad esta semana».
 
 Después enseña los cambios:
 ```powershell
@@ -172,10 +179,10 @@ git push -u origin riesgo-alto
 2. Enseña la pestaña *Files changed*.
 3. Pulsa **Create pull request** y después **Merge pull request**.
 
-### Demo 8 · Verlo publicado (3–4 min)
+### Demo 8 · Verlo publicado (2–3 min)
 1. En la pestaña **Actions**, enseña el workflow en verde (unos 20 segundos).
-2. En el Space, el estado pasa a *Building*. Mientras construye, explica la diapositiva de Docker.
-3. Cuando esté en *Running*, abre `https://TU-USUARIO-HF-demo-icade.hf.space` y pulsa **Predecir**. Aparece el aviso rojo.
+2. En el Space, el estado pasa a *Building*. Mientras arranca, explica la diapositiva de Docker.
+3. Cuando esté en *Running*, abre `https://TU-USUARIO-HF-demo-icade.hf.space` y pulsa **Predecir**. Aparece el aviso.
 
 ---
 
@@ -185,6 +192,7 @@ git push -u origin riesgo-alto
 |---|---|
 | No hay internet | Las demos 1 a 5 funcionan en local con el repo ya clonado. Pon el vídeo para las demos 6 a 8. |
 | El Space tarda | Sigue con las diapositivas de Docker y AWS y vuelve después. |
-| La interfaz da error de conexión | La API no está arrancada en la terminal 1. |
+| `python interfaz.py` dice que el puerto 7860 está ocupado | Hay otra copia de la app abierta: ciérrala con Ctrl+C. |
 | `git push` pide credenciales | Inicia sesión en la ventana del navegador que se abre. |
 | El Action falla en rojo | Revisa el secreto `HF_TOKEN` y el valor de `HF_SPACE` en `deploy.yml`. |
+| El Space da error con ZeroGPU | Mira los *Logs* del Space. Comprueba que el hardware elegido es ZeroGPU y que el SDK es Gradio. |
