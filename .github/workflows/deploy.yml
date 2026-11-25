@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
 
 env:
-  HF_SPACE: tu-usuario-hf/demo-icade   # <- cambiad tu-usuario-hf por vuestro usuario de Hugging Face
+  HF_SPACE: juaki0315/demo-icade
 
 jobs:
   deploy:
