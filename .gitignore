@@ -1,0 +1,10 @@
+# El modelo se genera con train.py: no se sube
+model.joblib
+
+# Entornos y cachés de Python
+__pycache__/
+.venv/
+venv/
+
+# Secretos: nunca se suben
+.env

@@ -1,0 +1,40 @@
+# Cada vez que algo entra en main, GitHub copia la app al Space de Hugging Face,
+# y Hugging Face reconstruye y publica la app.
+#
+# Preparación (una sola vez):
+#   1. Cambiad HF_SPACE por vuestro usuario de Hugging Face y el nombre del Space.
+#   2. En GitHub: Settings > Secrets and variables > Actions > New repository secret
+#      Nombre: HF_TOKEN   Valor: un token de Hugging Face con permiso de escritura.
+
+name: Desplegar en Hugging Face
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  HF_SPACE: tu-usuario-hf/demo-icade   # <- cambiad tu-usuario-hf por vuestro usuario de Hugging Face
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Subir al Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          if [ -z "$HF_TOKEN" ]; then
+            echo "Falta el secreto HF_TOKEN: no se despliega todavía."
+            exit 0
+          fi
+          # Hugging Face no acepta archivos binarios (como el .pptx) sin configuración extra,
+          # así que subimos solo la app: una copia sin historial y sin la carpeta charla/.
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git checkout --orphan despliegue
+          git rm -r -q --cached --ignore-unmatch charla
+          git commit -q -m "Despliegue desde GitHub ($GITHUB_SHA)"
+          HF_USER="${HF_SPACE%%/*}"
+          git push --force "https://${HF_USER}:${HF_TOKEN}@huggingface.co/spaces/${HF_SPACE}" despliegue:main
