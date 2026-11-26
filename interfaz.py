@@ -25,6 +25,8 @@ model = joblib.load("model.joblib")
 def predecir(antiguedad, gasto, llamadas):
     X = [[antiguedad, gasto, llamadas]]
     prob = model.predict_proba(X)[0][1]
+    if prob > 0.5:
+        return f"{prob:.0%} · Riesgo alto: llamad esta semana"
     return f"{prob:.0%}"
 
 
